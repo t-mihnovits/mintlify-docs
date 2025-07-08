@@ -1,0 +1,301 @@
+---
+type: page
+title: Referral Component
+listed: true
+slug: javascript-browser
+description: 
+index_title: Referral Component
+hidden: 
+keywords: 
+tags: 
+published: true
+---
+
+## What is it?
+
+The Cello Referral Component is a Javascript library that you can use to connect your logged-in users to the referral experience of your product. It facilitates communication between your application and Cello and adds the Cello Referral Component and entry widgets to your page. 
+
+The library is a Javascript library that is meant to run on a browser. As such, it will work with all web frameworks whose end product is HTML/Javascript. That includes React, Next.js, Vue, Angular etc. (for SSR supporting frameworks like Next.js, the limitation is that interacting with Cello needs to happen on the browser and not server side).
+
+By default, the action button and component will appear in the upper right corner and will look something like this:
+
+<Frame>
+  <img src="https://uploads.developerhub.io/prod/d316/nn7f08b00xfpz2nl85s0aui5ocqsb1howqx9pza8u0gqc3fw122cs4wnor7lfipj.png" />
+</Frame>
+
+## How does it work?
+
+In order to make your page work with the Referral Component, you need to follow these steps:
+
+1. Make your page download our Javascript bundle from our CDN, which includes the Referral Component.
+2. Have your **product ID** and **product secret** handy. You can get them from your Cello product dashboard on the [Access Keys page](https://portal.cello.so/integrations/accesskeys)
+
+<Frame>
+  <img src="https://uploads.developerhub.io/prod/d316/gbmekxgmzm84ac7zq031583vf5uobudfjk2drltz0f882e1ok1krmm2xqkr8sqcm.png" />
+</Frame>
+
+3. Create a Cello JWT token to connect the logged-in user and your page to Cello.
+4. Initialize the library with the token.
+
+## 1. Download the bundle
+
+Below is an example of how to download the Referral Library javascript bundle from our CDN. 
+
+In the example, the javascript tag is being loaded asynchronously, meaning it does not block your page from rendering other components and can be included in any part of your website. This is the recommended way of downloading the app, especially if SEO score is important for your page. 
+
+Once the bundle is loaded, it registers the library and is ready to be consumed by your javascript code.
+
+To add the [Cello Referral Component](/docs/component-overview) from CDN, use the following script in the `head` tag of your `index.html`
+
+**Sandbox Script CDN URL**
+
+```html
+<script type="module" src="https://assets.sandbox.cello.so/app/latest/cello.js" async></script>
+```
+
+**Production Script CDN URL**
+
+```html
+<script type="module" src="https://assets.cello.so/app/latest/cello.js" async></script>
+```
+
+## 2. Create a token
+
+In order to connect your customer's session to Cello and to securely communicate with Cello, you will need to create a JWT token to authenticate to Cello. The token will certify to Cello that it is your application and also provides the user's identity, making it possible to create a referral link unique to your user.
+
+### **Minting a JWT token should always be done on your backend code and not on browser side.**
+
+👉 See details in [User Authentication](https://docs.cello.so/docs/user-authentication)
+
+## 3. Initialize the library
+
+It requires one call to download the Cello Referral Library to initialize it.
+
+In the initialization call, you tell Cello your **product ID**, **created token**, and configuration parameters on how you want the Referral Library to behave.
+
+You do not have to wait and check whether the library has been loaded in point 1. In the below example, you can see a mechanism we provide to handle that particular race condition, so you can work with the `window.cello` object. If you are sure that the code is called later than the library is downloaded, then you can talk to the `window.Cello("boot"...`  command directly.
+
+<Warning>
+User details such as email and first name are required for fraud detection, features like email notifications, and the [new user banner](/docs/add-personalized-message).
+</Warning>
+
+```javascript
+window.cello = window.cello || { cmd: [] };
+
+window.cello.cmd.push(async function (cello) {
+  try {
+    await cello.boot({
+      productId: 'CELLO_PRODUCT_ID',
+      token: 'REPLACE_ME',
+      language: "en",
+      productUserDetails: {
+        firstName:'Bob',
+        lastName:'Bobsky',
+        fullName:'Bob B Bobsky',
+        email: 'bob@gmail.com'
+      }
+    });
+  } catch (error) {
+    console.error("Failed to boot cello:", error);
+    // Handle the error appropriately
+  }
+});
+```
+
+<Info>
+If you are experiencing issues integrating the Referral component, check out common errors and ways to mitigate them in the [Troubleshooting guide](/docs/troubleshooting)
+</Info>
+
+## What does the library do to your web application?
+
+**After downloading the bundle**
+
+1. It registers `window.Cello` which allows your web page code to communicate to Cello. 
+2. It grabs all calls you may have already made via the `window.cello.cmd` array, executes them, and reassigns `window.Cello` to our own proxy so that calls to it will also continue working.
+
+**After initialization (boot command)**
+
+1. Depending on your calls, it alters your web page by adding a Cello button or connecting  your button or menu item to display the Referral Component.
+2. It also creates the session that will be calling your defined callbacks or allows you to start communicating to Cello via `window.Cello`.
+
+## Referral Library SDK
+
+Below is the full list of commands with which you can call the Cello Referral Library.
+
+Note that the above mentioned `window.cello.cmd`  mechanism does work but is unnecessary for any other reason than initial calls where you may not be sure if your code is executed before the library is loaded. It is recommended to just call the methods via `window.Cello`
+
+### cello.boot(options)
+
+Initializes Cello Referral Component in your product.
+
+Returns a promise that is resolved once the whole initialization process is finished or rejected if the boot command failed.
+
+| Name | Type | Description | Required | 
+| ---- | ---- | ---- | ---- | 
+| productId | string | Identifier of the product your users will refer. You can obtain this in your Cello Portal. | Required | 
+| productUserCountryCode | string | Product user country, if known. ISO 3166 Alpha-2 standard. If the user is from an [unsupported country](/docs/component-overview#getting-rewarded), the Cello Referral Component will not be booted for this user and an error will be returned. If no country is passed, Cello will still be booted. Example: `DE` |  | 
+| token | string | Access token generated for the given user. More in [auto$](/docs/user-authentication). | Required | 
+| hideDefaultLauncher | boolean | Show or hide the Cello button, launching the Referral Component when it's first booted. Default: `false` |  | 
+| productUserDetails.email | string | Email of the product user. This data is used in the personalization of the referral experience, e.g. email notifications. | Recommended for feature functionality | 
+| productUserDetails.firstName | string | First name of the product user. This data is used in the personalization of the referral experience, e.g. email notifications and the [personalized message to referees](/docs/add-personalized-message). | Recommended for feature functionality | 
+| productUserDetails.lastName | string | Last name of the product user |  | 
+| productUserDetails.fullName | string | Full name of the product user. Use this option if you do not have first name and last name separately. |  | 
+| language | string | The language, in which the Referral component will be loaded in ISO 639-1. Default: `undefined`, if undefined, we use default language set for your product. |  | 
+| onOpen: () => { _your code_ } | function | Callback event for when Referral component widget is opened. |  | 
+| onClose: () => { _your code_ } | function | Callback event for when Referral component widget is closed. |  | 
+
+```javascript
+window.cello = window.cello || { cmd: [] };
+
+window.cello.cmd.push(async function (cello) {
+  try {
+    await cello.boot({
+      productId: 'CELLO_PRODUCT_ID',
+      token: 'REPLACE_ME',
+      language: "en",
+      productUserDetails: {
+        firstName:'Bob',
+        lastName:'Bobsky',
+        fullName:'Bob B Bobsky',
+        email: 'bob@gmail.com'
+      }
+    });
+    // call other Cello commands, if necessary
+  } catch (error) {
+    console.error("Failed to boot cello:", error);
+    // Handle the error appropriately
+  }
+});
+```
+
+### shutdown()
+
+Shuts down connection to Cello and unmounts the component
+
+```javascript
+window.Cello("shutdown");
+```
+
+### show()
+
+Shows the Cello button or bookmark that launches the Referral Component
+
+```javascript
+window.Cello("show");
+```
+
+### hide()
+
+Hides the Cello button or bookmark that launches the Referral Component
+
+```javascript
+window.Cello("hide");
+```
+
+### open()
+
+Opens the Referral Component
+
+```javascript
+window.Cello("open");
+```
+
+### open(destination)
+
+Opens the referral component on a specific tab / page
+
+```javascript
+window.Cello("open",destination)
+```
+
+`destination` = "rewards"|"edit-payments"
+
+- `rewards` - open referral component on rewards tab
+- `edit-payments` - open referral components on the payment details page
+
+### close()
+
+Closes Referral Component
+
+```javascript
+window.Cello("close");
+```
+
+### updateProductUserDetails
+
+Updates user details at runtime without re-initialising the component.
+
+```javascript
+window.Cello("updateProductUserDetails", {email: "bob@gmail.com", firstName: "Bob", lastName: "Bobsky", fullName: "Bob Bobsky"});
+```
+
+### changeLanguage(language)
+
+Changes the language of the Referral component at runtime without re-initialising component
+
+```javascript title="New since 21 Dec 2022"
+window.Cello("changeLanguage", "de");
+```
+
+```javascript title="Deprecated"
+window.Cello('changeLanguage', 'de');
+```
+
+### getActiveUcc()
+
+A method to get an active `ucc` and invite link for the currently logged in user.
+
+```javascript
+const {ucc, link} = await window.Cello("getActiveUcc");
+```
+
+#### Returns
+
+- `ucc` - active unique campaign code or referral code for the current logged in user
+- `link` - personal invite link for the current logged in user
+
+### showAnnouncement()
+
+A method to trigger an [announcement](/docs/notifications#announcement). Example below will trigger the default welcome announcement:
+
+```javascript
+window.Cello("showAnnouncement", { "type": "welcome-announcement-1" } );
+```
+
+## Controlling access to Referral component
+
+If you want to enable the Cello referral component only to selected users or control its visibility dynamically, we provide the following options:
+
+### a. Named user whitelist
+
+During the new referral program rollout with Cello, you may want to pilot with a small cohort of selected users. This can be achieved using our Named user whitelist. All you need to do is to provide a list of selected users UID's (productUserId's) to Cello. After they are added to the whitelist, only these users will have access to the Referral component until you are ready to rollout to your entire user base.
+
+### b. Show / Hide Referral component conditionally
+
+To control dynamically when and who sees the Referral component, you can also use `show()` and `hide()` methods. For example, you may decide to only show the Referral component after the user has completed onboarding. In that case, when a user first logs in, boot the component with `showOnBoot = false` and after onboarding is complete, use `cello.show()` to show the Cello button.
+
+## Opening the Referral Component with a Link
+
+You can automatically open the Cello widget with a link to your product by adding a param `?cello-open=true` to your URL.
+
+Add a link to the referral component to your email communication to help your users access the sharing options directly from the email.
+
+💡 **Tip:** If on sign-in the user is redirected between URL's, remember this parameter and then reattach it the final URL the user should end up on to automatically launch the Cello Referral Component.
+
+#### Link to your product with a param to open the Cello widget on Invite tab
+
+```text
+https://your-product.com?cello-open=invite
+```
+
+#### Link to your product with a param to open the Cello widget on Rewards tab
+
+```text
+https://your-product.com?cello-open=rewards
+```
+
+#### Link to your product with a param to open the Cello widget on Payments tab
+
+```text
+https://your-product.com?cello-open=edit-payments
+```
